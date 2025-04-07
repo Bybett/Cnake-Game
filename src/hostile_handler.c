@@ -5,8 +5,9 @@
 #include "char_to_int_entity.h"
 #include "global_defines.h"
 #include "wall_collide.h"
+#include "raylib.h"
 
-void updateHostile(Entity *entity, Tile level[ROWS][COLS]) {
+void updateHostile(Entity *entity, Tile level[ROWS][COLS], Player *player, Entity snake_body[]) {
   int *direction = &entity->direction;
   int type = char_to_int_entity(entity->type);
 //  int row = (int)(entity->rect.x / ROWS);
@@ -18,6 +19,11 @@ void updateHostile(Entity *entity, Tile level[ROWS][COLS]) {
   moveEntity(&ghost, direction);
   //Since every entity will check if it collides with a wall, we could do it here.
   bool is_wall_collide = wallCollide(ghost, level);
+
+  // Check if the enemy is colliding with the player.
+  for (int index = 0; index < player->body_len; index++) {
+    CheckCollisionRecs(entity->rect, snake_body[index]->rect);
+  }
 
   switch (type) {
     // Bouncer just inverts its direciton on wall collisions.

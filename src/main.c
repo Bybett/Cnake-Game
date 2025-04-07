@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
 // TODO: Idea for next game: Adventures of Joe Poncho
 
@@ -38,6 +39,7 @@ Entity *snake_body;
 
 int total_score = 0;
 int level_score = 0;
+bool restart;
 
 char levels_list[4][32] = {"../levels/level1.txt", "..levels/level2.txt"};
 
@@ -58,16 +60,16 @@ void gameOver(int end_state) {
     int text_width = MeasureText("YOU WIN", BIG_FONT);
     DrawText("YOU WIN", WINDOWW / 2 - text_width / 2, WINDOWH / 3,
               BIG_FONT, GREEN);
-    EndDrawing();
+    ClearBackground(BLACK);
   } else {
     BeginDrawing();
     ClearBackground(BLACK);
     int text_width = MeasureText("GAME OVER", BIG_FONT);
     DrawText("GAME OVER", WINDOWW / 2 - text_width / 2, WINDOWH / 3,
               BIG_FONT, RED);
-    EndDrawing();
   }
-  WaitTime(3);
+  EndDrawing();
+  WaitTime(2);
   CloseWindow();
   exit(0);
 }
@@ -183,7 +185,8 @@ void eventHandler() {
   }
 
   // Checking for player collision with various entities.
-  // Can't do the row/col divide by TILE_SIZE because we have to check all hostiles.
+  // Can't do the row/col divide by TILE_SIZE trick because we have to check
+  // a variable amount of entities
   for (int r = 0; r < ENTITY_TYPES; r++) {
     for (int c = 0; c < ENTITY_COUNT; c++) {
       Entity currenty_entity = entities[r][c];
@@ -206,6 +209,9 @@ void eventHandler() {
             break;
           case ENEMY:
             gameOver(LOSE);
+            editSnake(false);
+            break;
+          case BOUNCER:
             editSnake(false);
             break;
         }
@@ -277,6 +283,15 @@ void updateGame() {
  *    None
  */
 void initGame() {
+//  if (total_score > 0 || level_score > 0) {
+//    total_score = level_score = 0;
+//  }
+//  if (snake_body) {
+//    free(snake_body);
+//  }
+//  if (level[0][0].rect.x) {
+//    memset(level, 0, sizeof(level[0][0]) * ROWS * COLS);
+//  }
   // First arg is the path to the level, second arg is where to store the data.
   generate_level(levels_list[0], level, entities, &player);
   snake_body = (Entity*)malloc(sizeof(Entity));
@@ -322,7 +337,19 @@ int main() {
     for (int t = 0; t < ENTITY_TYPES; t++) {
       int count = entityArrLength(entities[t]);
       for (int c = 0; c < count; c++) {
-        DrawRectangleRec(entities[t][c].rect, entities[t][c].colour);
+        Entity entity = entities[t][c];
+        // If the entity doesn't have a texture, draw a basic rect with a colour.
+        if (entity.texture.id == (unsigned)0) {
+          DrawRectangleRec(entity.rect, entity.colour);
+        // If the entity does have a texture, draw it.
+        } else if (entity.texture.id > (unsigned)0) {
+          DrawTexturePro(entity.texture,
+                        (Rectangle){0, 0, TEXTURE_SRC, TEXTURE_SRC}, // Source texture. Defines what part of the texture to draw
+                        (Rectangle){entity.rect.x, entity.rect.y, TEXTURE_DEST, TEXTURE_DEST}, // Destination. Where and how big the texture is.
+                        (Vector2){0, 0}, 0, WHITE);
+        } else {
+          printf("ERROR DRAWING ENTITY: NO COLOUR OR TEXTURE");
+        }
       }
     }
     // Render the snake_body
@@ -336,5 +363,6 @@ int main() {
   }
 //  free(snake_body);
   CloseWindow();
+
 }
 

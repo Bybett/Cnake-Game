@@ -27,6 +27,7 @@ typedef struct Entity {
   Color colour;
   int direction;
   Rectangle rect;
+  Texture texture;
 } Entity;
 
 #endif // !CUSTOM_STRUCTS_

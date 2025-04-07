@@ -5,6 +5,7 @@
 #include "entity_defines.h"
 #include "global_defines.h"
 #include "global_structs.h"
+#include "asset_loader.h"
 #include "raylib.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +42,7 @@ void generate_level(const char *file_name, Tile parsed_level[ROWS][COLS],
 {
   char raw_level[ROWS][COLS];
   load_file(file_name, raw_level);
+  Texture fruit_texture = load_asset("../assets/fruit.png");
   int length;
   for (int r = 0; r < ROWS; r++) {
     for (int c = 0; c < COLS; c++) {
@@ -68,8 +70,9 @@ void generate_level(const char *file_name, Tile parsed_level[ROWS][COLS],
           length = entityArrLength(entity_list[FRUIT_INT]);
           parsed_level[r][c] = (Tile){{TILE_SIZE * c, TILE_SIZE * r,
                                        TILE_SIZE, TILE_SIZE}, WHITE, FLOOR};
-          entity_list[FRUIT_INT][length] = (Entity){.type = FRUIT, .colour = LIME, .direction = STILL,
-                                 .rect = {TILE_SIZE * c, TILE_SIZE *r, TILE_SIZE, TILE_SIZE}};
+          entity_list[FRUIT_INT][length] = (Entity){.type = FRUIT, .direction = STILL,
+                                 .rect = {TILE_SIZE * c, TILE_SIZE *r, TILE_SIZE, TILE_SIZE},
+                                 .texture=fruit_texture, .colour = DARKGREEN};
           break;
         case POWERUP:
           length = entityArrLength(entity_list[POWERUP_INT]);

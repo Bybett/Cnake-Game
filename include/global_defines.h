@@ -9,6 +9,9 @@
 #define WINDOWW 1024
 #define GAME_TITLE "Cnake Man"
 
+#define TEXTURE_SRC 16
+#define TEXTURE_DEST TEXTURE_SRC*2
+
 // Difficulties
 #define EASY 1.0f
 #define MEDIUM 0.64f
