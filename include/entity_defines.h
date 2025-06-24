@@ -7,14 +7,17 @@
 
 // For parsing the level data from files
 #define PLAYER '@'
+#define PLAYER_INT 0
+#define BODY '*'
+
 #define HAZARD '&'
 #define EXIT '^'
+
 #define FRUIT '$'
-#define FRUIT_INT 0 // Entity array index for fruit
+#define FRUIT_INT 1
+
 #define POWERUP '%'
-#define POWERUP_INT 1
-#define ENEMY '!'
-#define ENEMY_INT 2
+#define POWERUP_INT 2
 
 #define BOUNCER_V 'B' // Used for parsing the level data. Moves vertically
 #define BOUNCER_H 'b' // Like previous line, but moves horizontal.

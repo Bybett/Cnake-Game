@@ -1,17 +1,17 @@
-#include "raylib.h"
-#include "hostile_handler.h"
-#include "entity_defines.h"
-#include "title_screen.h"
-#include "level_loader.h"
-#include "arr_length.h"
-#include "global_defines.h"
-#include "global_structs.h"
+#include "../include/raylib.h"
+#include "../include/hostile_handler.h"
+#include "../include/title_screen.h"
+#include "../include/snake_handler.h"
+#include "../include/level_loader.h"
+#include "../include/arr_length.h"
+#include "../include/asset_loader.h"
+#include "../include/entity_defines.h"
+#include "../include/global_defines.h"
+#include "../include/global_structs.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
-
-// TODO: Idea for next game: Adventures of Joe Poncho
 
 #define WIN 0
 #define LOSE 1
@@ -22,7 +22,7 @@
 // Global variables
 //--------------------------------
 
-Player player = {.direction = RIGHT, .powerup = 0, .body_len = 1,
+Player player = {.direction = RIGHT, .powerup = 0, .body_len = 2,
                  .rect = {0, 0, SNAKE_SIZE, SNAKE_SIZE}};
 Entity fruit;
 
@@ -40,6 +40,11 @@ Entity *snake_body;
 int total_score = 0;
 int level_score = 0;
 bool restart;
+
+// Setup for the texture_data object. This will store the paths, count, and pointers for
+// all the textures used in the game.
+TextureStruct *texture_data;
+
 
 char levels_list[4][32] = {"../levels/level1.txt", "..levels/level2.txt"};
 
@@ -71,6 +76,7 @@ void gameOver(int end_state) {
   EndDrawing();
   WaitTime(2);
   CloseWindow();
+  free(snake_body);
   exit(0);
 }
 
@@ -112,36 +118,6 @@ void respawnEntity(Entity *re_entity, char valid_tile) {
   re_entity->rect.y = level[x_rand][y_rand].rect.y;
 }
 
-/* editSnake()
- *
- * This function handles extending and shrinking the snake's length.
- *
- * Params:
- *    bool grow -> true grows the snake by 1, false shrinks snake by 1.
- */
-void editSnake(bool grow) {
-  int length = player.body_len;
-  // If we're growing the snake, grow it.
-  if (grow) {
-    snake_body = realloc(snake_body, (length + 1) * sizeof(Entity));
-    if (snake_body == NULL) {
-      printf("Error growing snake_body...");
-      exit(1);
-    }
-    player.body_len++;
-    snake_body[length].colour = GREEN;
-    snake_body[length].rect = (Rectangle) {-100, -100, SNAKE_SIZE, SNAKE_SIZE};
-    snake_body[length].type = PLAYER;
-  } else {
-    snake_body = realloc(snake_body, (length - 1) * sizeof(Entity));
-    if (snake_body == NULL) {
-      printf("Error shrinking snake_body...");
-      exit(1);
-    }
-    player.body_len--;
-  }
-}
-
 /* eventHandler()
  *
  * This lil guy is for checking any game events. Player inputs, collision,
@@ -162,8 +138,6 @@ void eventHandler() {
     player.direction = RIGHT;
   }
 
-  // Check player collision with objects and do something depending
-  // on what the object is.
   int player_row, player_col;
   // Little trick. Since the pos is a multiple of the row/col and TILE_SIZE,
   // just divide by TILE_SIZE to get the row/col
@@ -183,7 +157,13 @@ void eventHandler() {
         break;
     }
   }
+}
 
+
+/*
+ * This handles all the collision detection for when the player collides with an entity
+ */
+void entityPlayerCollision() {
   // Checking for player collision with various entities.
   // Can't do the row/col divide by TILE_SIZE trick because we have to check
   // a variable amount of entities
@@ -191,12 +171,12 @@ void eventHandler() {
     for (int c = 0; c < ENTITY_COUNT; c++) {
       Entity currenty_entity = entities[r][c];
       if (CheckCollisionRecs(player.rect, currenty_entity.rect)) {
-        switch(currenty_entity.type) {
+        switch (currenty_entity.type) {
           case FRUIT:
             total_score += S_SCORE;
             level_score += S_SCORE;
             respawnEntity(&entities[r][c], FLOOR);
-            editSnake(true);
+            growSnake(&player, &snake_body, *texture_data);
             break;
           case POWERUP:
             total_score += B_SCORE;
@@ -204,22 +184,44 @@ void eventHandler() {
             respawnEntity(&entities[r][c], FLOOR);
             break;
           case HAZARD:
-            gameOver(LOSE);
-            editSnake(false);
-            break;
-          case ENEMY:
-            gameOver(LOSE);
-            editSnake(false);
+            shrinkSnake(&player, &snake_body, *texture_data);
             break;
           case BOUNCER:
-            editSnake(false);
+            shrinkSnake(&player, &snake_body, *texture_data);
             break;
+          case BOUNCER_V:
+            shrinkSnake(&player, &snake_body, *texture_data);
+            break;
+        }
+        if (player.body_len == 0) {
+          gameOver(LOSE);
+          free(snake_body);
+          CloseWindow();
+          exit(0);
         }
       }
     }
-    for (int i = 0; i< player.body_len; i++) {
-      if (CheckCollisionRecs(player.rect, snake_body[i].rect) && snake_body[i].type == PLAYER) {
+    for (int i = 1; i < player.body_len; i++) {
+      if (CheckCollisionRecs(player.rect, snake_body[i].rect) && snake_body[i].type == BODY) {
         gameOver(LOSE);
+      }
+    }
+  }
+}
+
+void entityBodyCollision() {
+  for (int t = 0; t < ENTITY_TYPES; t++) {
+    for (int c = 0; c < ENTITY_COUNT; c++) {
+      for (int i = 0; i < player.body_len; i++) {
+        if (CheckCollisionRecs(snake_body[i].rect, entities[t][c].rect)) {
+          shrinkSnake(&player, &snake_body, *texture_data);
+            if (player.body_len == 0) {
+            gameOver(LOSE);
+          }
+        }
+        if (CheckCollisionRecs(snake_body[0].rect, player.rect)) {
+          gameOver(LOSE);
+        }
       }
     }
   }
@@ -235,12 +237,14 @@ void eventHandler() {
  */
 void updateGame() {
   int length = player.body_len - 1;
+
   // Shift each body segment to the next position to make the body follow the player.
-  for (int b = length; b >= 0; b--) {
+  for (int b = length; b > 0; b--) {
     snake_body[b].rect = snake_body[b - 1].rect;
   }
   snake_body[0].rect = player.rect;
 
+  // Move the player depending on the value of player.direction
   switch (player.direction) {
     case UP:
       player.rect.y -= TILE_SIZE;
@@ -256,13 +260,14 @@ void updateGame() {
       break;
   }
 
-  // Checks if the player escapes the screen.
+  // Checks if the player escapes the screen... somehow :shrug:
   if (player.rect.y < 0 || player.rect.y > WINDOWH) {
     gameOver(LOSE);
   } else if (player.rect.x < 0 || player.rect.x > WINDOWW) {
     gameOver(LOSE);
   }
 
+  // Loop over entities and update their current pos
   for (int type = 0; type < ENTITY_TYPES; type++) {
     int hostile_count = entityArrLength(entities[type]);
     for (int count = 0; count < hostile_count; count++) {
@@ -282,22 +287,22 @@ void updateGame() {
  * Params:
  *    None
  */
-void initGame() {
-//  if (total_score > 0 || level_score > 0) {
-//    total_score = level_score = 0;
-//  }
-//  if (snake_body) {
-//    free(snake_body);
-//  }
-//  if (level[0][0].rect.x) {
-//    memset(level, 0, sizeof(level[0][0]) * ROWS * COLS);
-//  }
-  // First arg is the path to the level, second arg is where to store the data.
-  generate_level(levels_list[0], level, entities, &player);
-  snake_body = (Entity*)malloc(sizeof(Entity));
-  snake_body[0].colour = GREEN;
-  snake_body[0].rect = (Rectangle) {player.rect.x, player.rect.y,
-                                    SNAKE_SIZE, SNAKE_SIZE};
+void initGame(Entity **body) {
+  // Load le textures into HEAP!!
+  texture_data = malloc(sizeof(TextureStruct));
+  loadTextureArray(&texture_data);
+
+  // First arg is the level file, second arg is where to store the data.
+  generate_level(levels_list[0], level, entities, &player, *texture_data);
+
+  *body = malloc(sizeof(Entity) * player.body_len);
+
+  if (*body == NULL) {
+    printf("Error malloc'ing snake body\n");
+    exit(1);
+  }
+
+  setSnake(&snake_body, *texture_data);
 }
 
 /* main()
@@ -311,28 +316,35 @@ void initGame() {
 int main() {
   InitWindow(WINDOWW, WINDOWH, "Cnake Man");
 
-  float difficulty = MEDIUM;
+  float difficulty = EASY;
   float previous_time = 0.0f;
-  initGame();
+  initGame(&snake_body);
+
   SetTargetFPS(60);
   displayTitleScreen(&difficulty);
   while (!WindowShouldClose()) {
     float current_time = GetTime();
-    eventHandler();
     BeginDrawing();
     ClearBackground(WHITE);
+
     // Only update game logic once every wait_time.
-    // Gets the snake to move 1 tile/s
+    // Get entities to move one tile/s
     if (current_time - previous_time >= difficulty) {
       previous_time = GetTime();
       updateGame();
+      entityPlayerCollision();
+      entityBodyCollision();
     }
+
+    eventHandler();
+
     // Render the level
     for (int r = 0; r < ROWS; r++) {
       for (int c = 0; c < COLS; c++) {
         DrawRectangleRec(level[r][c].rect, level[r][c].colour);
       }
     }
+
     // Render all the entities
     for (int t = 0; t < ENTITY_TYPES; t++) {
       int count = entityArrLength(entities[t]);
@@ -344,25 +356,35 @@ int main() {
         // If the entity does have a texture, draw it.
         } else if (entity.texture.id > (unsigned)0) {
           DrawTexturePro(entity.texture,
-                        (Rectangle){0, 0, TEXTURE_SRC, TEXTURE_SRC}, // Source texture. Defines what part of the texture to draw
-                        (Rectangle){entity.rect.x, entity.rect.y, TEXTURE_DEST, TEXTURE_DEST}, // Destination. Where and how big the texture is.
+                        (Rectangle){0, 0, TEXTURE_SIZE, TEXTURE_SIZE},  // Source texture. Defines what part of the texture to draw
+                        (Rectangle){entity.rect.x, entity.rect.y, TEXTURE_SCALE, TEXTURE_SCALE},  // Destination. Where and how big the texture is.
                         (Vector2){0, 0}, 0, WHITE);
         } else {
           printf("ERROR DRAWING ENTITY: NO COLOUR OR TEXTURE");
         }
       }
     }
+
     // Render the snake_body
     for (int s = 0; s < player.body_len; s++) {
       Entity segment = snake_body[s];
-      DrawRectangleRec(segment.rect, segment.colour);
+      DrawTexturePro(segment.texture,
+                  (Rectangle){0, 0, TEXTURE_SIZE, TEXTURE_SIZE},
+                  (Rectangle){segment.rect.x, segment.rect.y, TEXTURE_SCALE, TEXTURE_SCALE},
+                  (Vector2){0,0}, 0, WHITE);
     }
-    DrawRectangleRec(player.rect, GREEN); // Render the player
-    displayUI(level_score, total_score); // This is always rendered last
+
+    // Draw the player
+    DrawTexturePro(player.texture,
+                  (Rectangle){0, 0, TEXTURE_SIZE, TEXTURE_SIZE},
+                  (Rectangle){player.rect.x, player.rect.y, TEXTURE_SCALE, TEXTURE_SCALE},
+                  (Vector2){0,0}, 0, WHITE);
+    displayUI(level_score, total_score);  // This is always rendered last
     EndDrawing();
   }
-//  free(snake_body);
-  CloseWindow();
 
+  free(snake_body);
+  CloseWindow();
+  exit(0);
 }
 

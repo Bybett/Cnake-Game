@@ -4,6 +4,6 @@
 #include "global_structs.h"
 #include "global_defines.h"
 
-void updateHostile(Entity *, Tile level[ROWS][COLS], Player *, Entity *[]);
+void updateHostile(Entity *, Tile level[ROWS][COLS]);
 
 #endif /* ENEMY_HANDLER_ */

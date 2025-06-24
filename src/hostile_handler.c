@@ -7,7 +7,7 @@
 #include "wall_collide.h"
 #include "raylib.h"
 
-void updateHostile(Entity *entity, Tile level[ROWS][COLS], Player *player, Entity snake_body[]) {
+void updateHostile(Entity *entity, Tile level[ROWS][COLS]) {
   int *direction = &entity->direction;
   int type = char_to_int_entity(entity->type);
 //  int row = (int)(entity->rect.x / ROWS);
@@ -19,11 +19,6 @@ void updateHostile(Entity *entity, Tile level[ROWS][COLS], Player *player, Entit
   moveEntity(&ghost, direction);
   //Since every entity will check if it collides with a wall, we could do it here.
   bool is_wall_collide = wallCollide(ghost, level);
-
-  // Check if the enemy is colliding with the player.
-  for (int index = 0; index < player->body_len; index++) {
-    CheckCollisionRecs(entity->rect, snake_body[index]->rect);
-  }
 
   switch (type) {
     // Bouncer just inverts its direciton on wall collisions.
@@ -46,6 +41,10 @@ void updateHostile(Entity *entity, Tile level[ROWS][COLS], Player *player, Entit
       }
       break;
     case PATROLLER:
+      // The patroller will pace back and forth in an area through level design.
+      // When the patroller bumps into a wall, it will check clock-wise which direction
+      // it can move. It won't move backwards immediatly, it only will if there is
+      // no other valid route for it.
       int backwards = 0;
       int initial_direction = *direction;
       // If the direction is either up or right, add 2 to make is the opposite dir.
@@ -72,9 +71,11 @@ void updateHostile(Entity *entity, Tile level[ROWS][COLS], Player *player, Entit
         ghost = (Rectangle){rect->x, rect->y, TILE_SIZE, TILE_SIZE};
         moveEntity(&ghost, direction);
         is_wall_collide = wallCollide(ghost, level);
+        // We don't want to go backwards, unless there is no other valid route.
         if (!is_wall_collide && *direction == backwards) {
           is_wall_collide = true;
         }
+        // If there are no valid, we go back the way we came.
         if (*direction == initial_direction) {
           is_wall_collide = false;
           *direction = backwards;

@@ -9,8 +9,8 @@
 #define WINDOWW 1024
 #define GAME_TITLE "Cnake Man"
 
-#define TEXTURE_SRC 16
-#define TEXTURE_DEST TEXTURE_SRC*2
+#define TEXTURE_SIZE 8 // Size of the texture
+#define TEXTURE_SCALE TEXTURE_SIZE*4 // The scale of the texture used in the rectangle destination parameter
 
 // Difficulties
 #define EASY 1.0f
@@ -31,5 +31,9 @@
 #define RIGHT 2
 #define DOWN 3
 #define LEFT 4
+
+// Array stuff
+#define MAX_TEXTURES 32
+#define MAX_PATH_LENGTH 32
 
 #endif // !GAME_DEFINES_

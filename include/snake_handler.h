@@ -2,12 +2,11 @@
 #define SNAKE_HANDLER_
 
 #include "global_structs.h"
-#include "global_defines.h"
 
-void rotate_head(Player player, int direction);
+void growSnake(Player *player, Entity **body, TextureStruct texture_data);
 
-void rotate_body(Entity *body);
+void shrinkSnake(Player *player, Entity **body, TextureStruct texture_data);
 
-void cut_snake(Entity *body);
+void setSnake(Entity **body, TextureStruct texture_data);
 
 #endif

@@ -3,6 +3,8 @@
 
 int char_to_int_entity(char type) {
   switch(type) {
+    case BODY:
+      return PLAYER_INT;
     case BOUNCER_H:
       case BOUNCER_V:
       return BOUNCER;

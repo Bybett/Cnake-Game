@@ -4,26 +4,29 @@
 #include "global_structs.h"
 #include "entity_defines.h"
 #include "char_to_int_entity.h"
+#include "asset_loader.h"
 #include <stdlib.h>
 #include <time.h>
 
 #define MAX_RANDOM 100
 
-void setEntity(char char_type, int row, int col,
-               Entity entity_list[ENTITY_TYPES][ENTITY_COUNT])
+void setEntity(char entity_type, int row, int col,
+               Entity entity_list[ENTITY_TYPES][ENTITY_COUNT], TextureStruct texture_data)
 {
-  int int_type = char_to_int_entity(char_type);
+  int int_type = char_to_int_entity(entity_type);
   int length = entityArrLength(entity_list[int_type]);
   srand(time(NULL));
   int rand_num = rand() % MAX_RANDOM;
   int dir = LEFT;
-  if (char_type >= 'A' && char_type <= 'Z') {
+  Texture2D entity_texture = *texture_data.array[TEXTURE_MISSING];
+
+  if (entity_type >= 'A' && entity_type <= 'Z') {
     if (rand_num > 50) {
       dir = UP;
     } else {
       dir = DOWN;
     }
-  } else if (char_type >= 'a' && char_type <= 'z') {
+  } else if (entity_type >= 'a' && entity_type <= 'z') {
     if (rand_num > 50) {
       dir = LEFT;
     } else {
@@ -33,18 +36,20 @@ void setEntity(char char_type, int row, int col,
   switch (int_type) {
     case BOUNCER:
       entity_list[int_type][length] = (Entity) {
-        char_type,
+        entity_type,
         YELLOW,
         dir,
-        {col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE}
+        {col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE},
+        entity_texture
       };
       break;
     case PATROLLER:
       entity_list[int_type][length] = (Entity) {
-        char_type,
+        entity_type,
         YELLOW,
         dir,
-        {col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE}
+        {col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE},
+        entity_texture
       };
       break;
   }
